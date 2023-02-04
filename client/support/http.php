@@ -1,11 +1,11 @@
 <?php
 	// CubicleSoft PHP HTTP class.
-	// (C) 2018 CubicleSoft.  All Rights Reserved.
+	// (C) 2021 CubicleSoft.  All Rights Reserved.
 
 	class HTTP
 	{
-		// RFC 3986 delimeter splitting implementation.
-		public static function ExtractURL($url)
+		// RFC 3986 delimeter splitting implementation with IDNA/Punycode support.
+		public static function ExtractURL($url, $idnahost = true)
 		{
 			$result = array(
 				"scheme" => "",
@@ -116,6 +116,25 @@
 					}
 
 					$result["host"] = $url;
+
+					// Handle conversion to Punycode for IDNs.
+					if ($idnahost)
+					{
+						$y = strlen($result["host"]);
+						for ($x = 0; $x < $y && ord($result["host"][$x]) <= 0x7F; $x++);
+
+						if ($x < $y)
+						{
+							if (!class_exists("UTFUtils", false))  require_once str_replace("\\", "/", dirname(__FILE__)) . "/utf_utils.php";
+
+							$host = UTFUtils::ConvertToPunycode($result["host"]);
+							if ($host !== false)
+							{
+								$result["orighost"] = $result["host"];
+								$result["host"] = $host;
+							}
+						}
+					}
 				}
 			}
 
@@ -238,16 +257,18 @@
 
 			if ($type == "ie")  $type = "ie11";
 
+			// Last updated March 10, 2022.
 			if ($type == "ie6")  return "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322; .NET CLR 2.0.50727; .NET CLR 3.0.04506.30; .NET CLR 3.0.04506.648; .NET CLR 3.5.21022)";
 			else if ($type == "ie7")  return "Mozilla/4.0 (compatible; MSIE 7.0b; Windows NT 6.0)";
 			else if ($type == "ie8")  return "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0; SLCC1)";
 			else if ($type == "ie9")  return "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)";
 			else if ($type == "ie10")  return "Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0)";
 			else if ($type == "ie11")  return "Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko";
-			else if ($type == "firefox")  return "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:77.0) Gecko/20100101 Firefox/77.0";
-			else if ($type == "opera")  return "Opera/9.80 (Windows NT 6.1; WOW64) Presto/2.12.388 Version/12.16";
-			else if ($type == "safari")  return "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_6_8) AppleWebKit/537.13+ (KHTML, like Gecko) Version/5.1.7 Safari/534.57.2";
-			else if ($type == "chrome")  return "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36";
+			else if ($type == "edge")  return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36 Edg/99.0.1150.36";
+			else if ($type == "firefox")  return "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:98.0) Gecko/20100101 Firefox/98.0";
+			else if ($type == "opera")  return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36 OPR/84.0.4316.21";
+			else if ($type == "safari")  return "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_2_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.3 Safari/605.1.15";
+			else if ($type == "chrome")  return "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.80 Safari/537.36";
 
 			return "";
 		}
@@ -256,11 +277,12 @@
 		{
 			$type = strtolower($type);
 
-			// Cipher list last updated May 3, 2017.
-			if ($type == "modern")  return "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256";
+			// Cipher list last updated March 10, 2022.
+			// Source:  https://ssl-config.mozilla.org/
+			if ($type == "modern")  return "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384";
 			else if ($type == "old")  return "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:ECDHE-RSA-DES-CBC3-SHA:ECDHE-ECDSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:DES-CBC3-SHA:HIGH:SEED:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!RSAPSK:!aDH:!aECDH:!EDH-DSS-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA:!SRP";
 
-			return "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS";
+			return "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES256-SHA256:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS";
 		}
 
 		public static function GetSafeSSLOpts($cafile = true, $cipherstype = "intermediate")
@@ -1623,6 +1645,11 @@
 			if ($useproxy && !$proxyconnect && $proxyusername != "")  $data .= "Proxy-Authorization: BASIC " . base64_encode($proxyusername . ":" . $proxypassword) . "\r\n";
 			if ($username != "")  $data .= "Authorization: BASIC " . base64_encode($username . ":" . $password) . "\r\n";
 			$ver = explode(".", $options["httpver"]);
+			if (isset($options["headers"]["Host"]))
+			{
+				$url2 = self::ExtractURL("http://" . $options["headers"]["Host"]);
+				$options["headers"]["Host"] = $url2["host"] . (isset($url2["port"]) && $url2["port"] != "" ? ":" . $url2["port"] : "");
+			}
 			if ((int)$ver[0] > 1 || ((int)$ver[0] == 1 && (int)$ver[1] >= 1))
 			{
 				if (!isset($options["headers"]["Host"]))  $options["headers"]["Host"] = $host . ($defaultport ? "" : ":" . $port);
@@ -1824,7 +1851,12 @@
 					if (isset($options["source_ip"]))  $context["socket"] = array("bindto" => $options["source_ip"] . ":0");
 					if ($secure)
 					{
-						if (!isset($options["sslopts"]) || !is_array($options["sslopts"]))  $options["sslopts"] = self::GetSafeSSLOpts();
+						if (!isset($options["sslopts"]) || !is_array($options["sslopts"]))
+						{
+							$options["sslopts"] = self::GetSafeSSLOpts();
+							$options["sslopts"]["auto_peer_name"] = true;
+						}
+
 						self::ProcessSSLOptions($options, "sslopts", $host);
 						foreach ($options["sslopts"] as $key => $val)  @stream_context_set_option($context, "ssl", $key, $val);
 					}
